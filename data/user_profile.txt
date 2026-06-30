@@ -1,0 +1,48 @@
+# Sample user profile - Replace with your actual information
+# This file is used by the Fit Scoring Agent to evaluate job matches
+
+## Professional Summary
+Senior Software Engineer with 5+ years of experience building scalable distributed systems
+and full-stack web applications. Expertise in Python, TypeScript, React, and cloud-native
+architectures. Passionate about building developer tools and data-intensive applications.
+
+## Technical Skills
+- Languages: Python, TypeScript, JavaScript, Go, SQL
+- Frontend: React, Next.js, Vue.js, Tailwind CSS
+- Backend: FastAPI, Django, Node.js, Express
+- Databases: PostgreSQL, MongoDB, Redis, DynamoDB
+- Cloud: AWS (EC2, Lambda, S3, ECS), GCP (Cloud Run, BigQuery)
+- DevOps: Docker, Kubernetes, Terraform, GitHub Actions, CI/CD
+- Data: Apache Kafka, Spark, Airflow, dbt
+- ML/AI: LangChain, OpenAI API, Vector Databases, RAG systems
+
+## Experience Level
+- 5+ years software engineering
+- 2+ years leading technical projects
+- Experience with system design at scale (millions of users)
+
+## Target Roles
+- Senior Software Engineer
+- Staff Engineer
+- Senior Full-Stack Engineer
+- Platform Engineer
+- Senior Backend Engineer
+
+## Target Companies
+- MAANG/FAANG (Google, Meta, Apple, Amazon, Netflix)
+- Top Product Companies (Stripe, Airbnb, Databricks, etc.)
+- AI-first companies (OpenAI, Anthropic, etc.)
+
+## Location Preferences
+- Remote (US/Europe)
+- San Francisco Bay Area
+- New York
+- London
+- Berlin
+- Singapore
+
+## Not Interested In
+- Roles based in India
+- Junior-level positions
+- Purely frontend roles without system design
+- Companies with <50 employees (too early stage)
