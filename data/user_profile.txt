@@ -34,15 +34,19 @@ architectures. Passionate about building developer tools and data-intensive appl
 - AI-first companies (OpenAI, Anthropic, etc.)
 
 ## Location Preferences
-- Remote (US/Europe)
-- San Francisco Bay Area
-- New York
-- London
-- Berlin
+- India (Bangalore, Hyderabad, Mumbai, Pune, Gurgaon)
+- Germany (Berlin, Munich)
+- Netherlands (Amsterdam)
+- UK (London)
+- Europe (Ireland, France, Switzerland, Sweden, Denmark)
+- Australia (Sydney, Melbourne)
+- Japan (Tokyo)
 - Singapore
+- Canada (Toronto, Vancouver)
+- Remote (any region except USA)
 
 ## Not Interested In
-- Roles based in India
+- Roles based in USA/United States
 - Junior-level positions
 - Purely frontend roles without system design
 - Companies with <50 employees (too early stage)

@@ -31,8 +31,8 @@ Scoring rules:
 4. Company type (20% weight): Prefer MAANG/FAANG and product-based companies.
 
 Location rules:
-- Target: US, UK, Canada, Germany, Netherlands, Singapore, Australia
-- Exclude: India (hard filter - score 0)
+- Target: India, Germany, Netherlands, UK, Europe, Australia, Japan, Singapore, Canada
+- Exclude: USA/United States (hard filter - score 0)
 - Remote roles get full location score
 
 Return a JSON with exact fields as specified."""
@@ -86,7 +86,7 @@ class FitScoringAgent:
                 seniority_match_score=0.0,
                 location_match_score=0.0,
                 company_type_score=0.0,
-                reasoning="Job is in an excluded location (India).",
+                reasoning="Job is in an excluded location (USA).",
                 matched_skills=[],
                 missing_skills=parsed_jd.skills_required,
                 recommendation="skip",

@@ -13,6 +13,7 @@ from src.ingestion.lever import LeverFetcher
 from src.ingestion.remoteok import RemoteOKFetcher
 from src.ingestion.wellfound import WellfoundFetcher
 from src.ingestion.linkedin import LinkedInExportParser
+from src.ingestion.apify_scraper import ApifyLinkedInFetcher, ApifyIndeedFetcher
 from src.config import settings
 
 
@@ -40,6 +41,11 @@ class IngestionOrchestrator:
             "wellfound": WellfoundFetcher(),
             "linkedin": LinkedInExportParser(),
         }
+
+        # Add Apify scrapers if API token is configured
+        if settings.apify_api_token:
+            self.fetchers["linkedin_apify"] = ApifyLinkedInFetcher()
+            self.fetchers["indeed_apify"] = ApifyIndeedFetcher()
 
     async def ingest_all(self, query: str, location: str | None = None) -> dict:
         """Fetch from all sources, deduplicate, and store."""

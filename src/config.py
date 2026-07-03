@@ -31,12 +31,17 @@ class Settings(BaseSettings):
     gmail_credentials_file: str = "./credentials/gmail_credentials.json"
     calendar_credentials_file: str = "./credentials/calendar_credentials.json"
 
+    # Apify (for LinkedIn/Indeed scraping)
+    apify_api_token: str = ""
+
     # Agent Configuration
     fit_score_threshold: float = 0.70
     target_locations: list[str] = [
-        "US", "UK", "Canada", "Germany", "Netherlands", "Singapore", "Australia"
+        "India", "Germany", "Netherlands", "UK", "Ireland", "France", "Spain",
+        "Switzerland", "Sweden", "Denmark", "Poland", "Austria",
+        "Australia", "Japan", "Singapore", "Canada", "Remote",
     ]
-    excluded_locations: list[str] = ["India"]
+    excluded_locations: list[str] = ["US", "USA", "United States"]
     target_companies_type: list[str] = ["MAANG", "FAANG", "product-based"]
     seniority_levels: list[str] = ["mid", "senior", "staff"]
 
