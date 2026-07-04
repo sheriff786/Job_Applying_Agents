@@ -1,40 +1,76 @@
-# Sample user profile - Replace with your actual information
+# Mohammad Sheriff Mehmood - Profile
 # This file is used by the Fit Scoring Agent to evaluate job matches
 
+## Contact Information
+- Phone: +91 7999937693
+- Email: mdsheriff2702@gmail.com
+- LinkedIn: linkedin.com/in/mohammad-sheriff
+- GitHub: github.com/sheriff786
+
 ## Professional Summary
-Senior Software Engineer with 5+ years of experience building scalable distributed systems
-and full-stack web applications. Expertise in Python, TypeScript, React, and cloud-native
-architectures. Passionate about building developer tools and data-intensive applications.
+Senior Data Scientist & AI/ML Engineer with 6+ years of experience building AI systems that
+move business metrics. Specializing in NLP, LLMs, and production MLOps, I have shipped
+enterprise-grade GenAI systems that delivered $1M+ revenue uplift, cut churn by 40%, and
+accelerated model iteration by 60% across healthcare, finance, and retail.
+Open-source author: published 'authentica' on PyPI, actively used in production at Businessolver
+(Healthcare Benefits SaaS).
 
 ## Technical Skills
-- Languages: Python, TypeScript, JavaScript, Go, SQL
-- Frontend: React, Next.js, Vue.js, Tailwind CSS
-- Backend: FastAPI, Django, Node.js, Express
-- Databases: PostgreSQL, MongoDB, Redis, DynamoDB
-- Cloud: AWS (EC2, Lambda, S3, ECS), GCP (Cloud Run, BigQuery)
-- DevOps: Docker, Kubernetes, Terraform, GitHub Actions, CI/CD
-- Data: Apache Kafka, Spark, Airflow, dbt
-- ML/AI: LangChain, OpenAI API, Vector Databases, RAG systems
+- Languages: Python (primary)
+- ML/DL Frameworks: TensorFlow, PyTorch, Scikit-learn, NumPy, Pandas, OpenCV, YOLO, CNN
+- GenAI & LLMs: LangChain, LangSmith, OpenAI API, Gemini, RAG, LLMOps, Fine-tuning, Prompt Engineering, Agentic AI, MCP, Transformer Models, Sentence-Transformers, CrewAI
+- MLOps & Cloud: MLflow, Docker, Kubernetes, Airflow, GCP (Vertex AI), AWS (SageMaker, ECS, CodePipeline, Lambda, Comprehend, Textract, S3), CI/CD
+- Databases: MongoDB, SQL, PostgreSQL, ChromaDB, FAISS, Pinecone
+- Tools & Other: Tableau, Weights & Biases, FastAPI, Flask, Django, A/B Testing, REST API Design, Git, React (for ML UIs)
 
 ## Experience Level
-- 5+ years software engineering
-- 2+ years leading technical projects
-- Experience with system design at scale (millions of users)
+- 6+ years in Data Science & AI/ML Engineering
+- Led cross-functional teams (7+ members)
+- Production ML systems at enterprise scale (healthcare, finance, retail)
+- End-to-end MLOps pipeline design and deployment
+
+## Work Experience
+- Senior Data Scientist & AI/ML Engineer at ValueLabs, Hyderabad (Mar 2025 – Present) - Generative AI
+- Senior Data Scientist – NLP Engineer at LTIMindtree, Pune (Jan 2024 – Mar 2025) - Embedded with Businessolver's Data Science team
+- Data Scientist at Cognizant Technology Solutions, Chennai (Dec 2019 – Jan 2024) - Promoted from Programmer Analyst
+
+## Education
+- M.Tech in Data Science & Engineering – BITS Pilani (Oct 2021 – Oct 2023)
+- B.E in Computer Science & Engineering – OIST Bhopal (Aug 2015 – Jun 2019)
+
+## Certifications
+- GCP Professional ML Engineer (Certified Feb 2023)
+- Certified MLOps Developer – Dataiku
+- IBM Professional Data Science Certification
+
+## Key Achievements
+- $1M+ annual healthcare revenue via anomaly-detection targeting model at 90% precision
+- Reduced customer churn by 40% generating $300K additional quarterly revenue
+- Cut model iteration time by 60% with LLMOps pipeline
+- 1st Prize – Trizetto Hackathon (Patient Data Integration, 95% approval rate)
+- Company Innovation Award for Fraud Detection System
+- Speaker at PyData Conference
 
 ## Target Roles
-- Senior Software Engineer
-- Staff Engineer
-- Senior Full-Stack Engineer
-- Platform Engineer
-- Senior Backend Engineer
+- Senior Data Scientist
+- Principal Data Scientist
+- AI/ML Engineer
+- Senior AI/ML Engineer
+- Lead Data Scientist
+- NLP Engineer
+- GenAI Engineer
+- MLOps Engineer
 
 ## Target Companies
 - MAANG/FAANG (Google, Meta, Apple, Amazon, Netflix)
-- Top Product Companies (Stripe, Airbnb, Databricks, etc.)
-- AI-first companies (OpenAI, Anthropic, etc.)
+- Top Product Companies (Stripe, Airbnb, Databricks, Snowflake, etc.)
+- AI-first companies (OpenAI, Anthropic, Cohere, Hugging Face, etc.)
+- Enterprise AI (Microsoft, Salesforce, Adobe, etc.)
+- Healthcare AI companies
+- Finance/Fintech AI companies
 
 ## Location Preferences
-- India (Bangalore, Hyderabad, Mumbai, Pune, Gurgaon)
+- India (Bangalore, Hyderabad, Mumbai, Pune, Chennai, Gurgaon)
 - Germany (Berlin, Munich)
 - Netherlands (Amsterdam)
 - UK (London)
@@ -43,10 +79,10 @@ architectures. Passionate about building developer tools and data-intensive appl
 - Japan (Tokyo)
 - Singapore
 - Canada (Toronto, Vancouver)
-- Remote (any region except USA)
+- Remote (any region)
 
 ## Not Interested In
-- Roles based in USA/United States
 - Junior-level positions
-- Purely frontend roles without system design
+- Purely frontend roles without ML/AI component
 - Companies with <50 employees (too early stage)
+- Roles with no ML/AI/Data Science focus

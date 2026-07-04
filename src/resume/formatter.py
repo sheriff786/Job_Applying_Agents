@@ -1,377 +1,416 @@
-"""Resume DOCX formatter - Handles reading/writing Word documents with precise formatting."""
+"""Resume DOCX formatter - Builds ATS-optimized 2-page resume with hyperlinks and consistent formatting.
 
-import copy
+This formatter follows the exact template from the user's original resume:
+- Page 1: Header → Summary → Skills → ValueLabs → LTIMindtree
+- Page 2: Cognizant → Research Projects → Education → Certifications
+- Consistent · separator throughout
+- ▸ bullet markers
+- Clickable hyperlinks (LinkedIn, GitHub, Portfolio, PyPI, project links)
+- 4-5 bullets per company with metrics
+"""
+
+import json
+import re
 from pathlib import Path
+from datetime import datetime
 
 from docx import Document
-from docx.shared import Pt, Inches, RGBColor, Cm
-from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.enum.style import WD_STYLE_TYPE
+from docx.shared import Pt, Cm, RGBColor
+from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_BREAK
+from docx.oxml.ns import qn
+from docx.oxml import OxmlElement
 
 from src.resume.tailoring_agent import TailoringResult, TailoredSection
 
 
+# Resume data extracted from actual resume (source of truth)
+RESUME_DATA = {
+    "name": "Mohammad Sheriff Mehmood",
+    "title": "Senior Data Scientist · NLP & Generative AI Engineer",
+    "phone": "+91 7999937693",
+    "email": "mdsheriff2702@gmail.com",
+    "linkedin_url": "https://www.linkedin.com/in/mohammad-sheriff/",
+    "github_url": "https://github.com/sheriff786",
+    "portfolio_url": "https://sheriff786.github.io/My_Portfolio_Website/#about",
+    "authentica_url": "https://pypi.org/project/authentica/",
+    "skills": {
+        "Languages": "Python (primary) — proficient in TensorFlow · PyTorch · Scikit-learn · NumPy · Pandas · OpenCV · YOLO · CNN",
+        "GenAI & LLMs": "LangChain · LangSmith · OpenAI API · Gemini · RAG · LLMOps · Fine-tuning · Prompt Engineering · Agentic AI · MCP · Transformer Models · Sentence-Transformers · CrewAI",
+        "MLOps & Cloud": "MLflow · Docker · Kubernetes · Airflow · GCP (Vertex AI) · AWS (SageMaker · ECS · CodePipeline) · CI/CD",
+        "Databases": "PostgreSQL · MongoDB · SQL · ChromaDB · FAISS · Pinecone",
+        "Tools & Other": "Tableau · Weights & Biases · FastAPI · Flask · Django · A/B Testing · REST API Design · Git",
+    },
+    "experience": [
+        {
+            "company": "ValueLabs",
+            "location": "Hyderabad, India",
+            "title": "Senior Data Scientist | AI/ML Engineer",
+            "dates": "Mar 2025 – Present",
+            "context": "Embedded with Businessolver's Data Science team as a full-stack ML Engineer; designed and shipped an automated document analysis pipeline leveraging computer vision · VLMs · and AWS-native tooling to process healthcare documents at scale.",
+            "bullets": [
+                "Document Analysis Pipeline: Designed an end-to-end multi-modal pipeline on AWS (Comprehend · Textract · S3 · ECS) to classify and extract data from 47,000+ healthcare documents · significantly cutting manual claim validation time.",
+                "Query-Based Document Understanding: Built a custom QA system integrating visual features from Textract OCR with textual embeddings across varied layouts; deployed inference on AWS Lambda achieving 93% extraction precision.",
+                "Annotation & Monitoring UI: Built an interactive React UI with REST API for data annotation/validation · real-time model metric visualisation · performance monitoring · and data-driven threshold tuning streamlining stakeholder review cycles.",
+                "Stacking Ensemble Model: Trained and tuned a stacking ensemble (Random Forest · XGBoost · LightGBM) via cross-validation achieving 0.78 F1 and 0.81 AUC; applied SHAP and Gini impurity for model explainability.",
+            ],
+        },
+        {
+            "company": "LTIMindtree",
+            "location": "Pune, India",
+            "title": "Senior Data Scientist – NLP Engineer",
+            "dates": "Jan 2024 – Mar 2025",
+            "context": None,
+            "bullets": [
+                "GenAI Chatbot & RAG System: Architected production-grade RAG chatbot (Gemini + FAISS Vector DB) serving 15+ team members with 90% query accuracy and sub-2s response time for enterprise knowledge retrieval.",
+                "LLMOps Pipeline: Built end-to-end LLMOps pipeline using OpenAI · LangChain · ChromaDB · and sentence-transformers cutting model iteration time by 60% and reducing deployment overhead by 50%.",
+                "Healthcare Revenue Model: Deployed anomaly-detection targeting model generating $1M+ in annual healthcare revenue at 90% precision; reduced false positives by 20% via class-weighted ensemble (Logistic Regression + Random Forest).",
+                "Workflow Orchestration: Designed Airflow DAGs to automate multi-step ML pipelines · cutting end-to-end processing time by 40% and improving delivery velocity across a 7-member team.",
+                "Semantic NLP (BioBERT): Generated vector embeddings for ICD-9 and medical procedure codes using BioBERT · improving semantic search accuracy by 18% over TF-IDF baseline.",
+            ],
+        },
+        {
+            "company": "Cognizant Technology Solutions",
+            "location": "Chennai, India",
+            "title": "Data Scientist",
+            "dates": "Dec 2019 – Jan 2024",
+            "context": "Joined as Programmer Analyst → core ML systems, promoted to Data Scientist (leading cross-functional AI/NLP initiatives).",
+            "page_break_before": True,
+            "bullets": [
+                "ML Model Development: Built and deployed supervised ML models improving prediction accuracy by 20% and saving $200K in operational costs; improved baselines by 5–10% using Neural Networks · ensemble methods · GridSearchCV.",
+                "AI Customer Support Platform: Led 7-member cross-functional team to build NLP-powered support application; reduced customer churn by 40% and generated $300K additional quarterly revenue through context-aware intelligent responses.",
+                "Fraud Detection System: Reduced false-positive fraud alerts by 20% using Logistic Regression and Random Forest with class-weighted resampling — received company Innovation Award.",
+                "Data Platform & BI: Unified 10+ heterogeneous data sources (databases · APIs · third-party feeds) into ML-ready pipelines; built Tableau dashboards tracking 20+ KPIs · improving cross-team reporting efficiency by 30%.",
+            ],
+        },
+    ],
+    "projects": [
+        {
+            "title": "Abstractive Text Summarisation",
+            "tech": "Python · BERT · NLP · Transformers",
+            "github_url": "https://github.com/sheriff786",
+            "bullets": [
+                "Applied BERT and NLP toolkits to summarise live chat context, improving agent efficiency by 35% and reducing customer response times by 25%.",
+                "Gave agents instant access to previous chat history — reducing handle time and improving resolution quality.",
+            ],
+        },
+        {
+            "title": "End-to-End Topic Modelling & MLOps on AWS",
+            "tech": "Python · LDA · Docker · AWS ECS · MLflow · CodePipeline · EC2",
+            "github_url": "https://github.com/sheriff786",
+            "bullets": [
+                "Built LDA topic modelling pipeline on AWS ECS with blue/green deployment — cut processing time by 40% and deployment time by 60%.",
+                "Automated full CI/CD (CodeCommit · CodeBuild · CodeDeploy · CodePipeline); reduced manual effort by 70%. Used MLflow for model versioning.",
+            ],
+        },
+        {
+            "title": "Visa Approval Forecasting (US Immigration)",
+            "tech": "Python · ML · MongoDB · Docker · AWS · GridSearchCV",
+            "github_url": "https://github.com/sheriff786",
+            "bullets": [
+                "Predicted US visa approval outcomes using production-grade ML models; performed EDA · feature engineering · and hyperparameter tuning via GridSearchCV.",
+                "Connected MongoDB for data persistence; containerised solution with Docker for AWS deployment.",
+            ],
+        },
+        {
+            "title": "Disease Classification Mobile App",
+            "tech": "TensorFlow · CNN · TFLite · FastAPI · GCP · ReactJS · React Native",
+            "github_url": "https://github.com/sheriff786",
+            "bullets": [
+                "Achieved 92% accuracy detecting Early/Late Blight; quantized CNN with TF Lite — reduced model size by 80% and inference latency by 50% for on-device deployment.",
+                "Deployed serverless inference on Google Cloud Functions (25% cost reduction); served real-time predictions via TF Serving + FastAPI.",
+            ],
+        },
+        {
+            "title": "Accident & Fall Detection System",
+            "tech": "Python · YOLO · OpenCV · CNN · CUDA · SMTP",
+            "github_url": "https://github.com/sheriff786",
+            "bullets": [
+                "Built real-time human fall detection system achieving 95% accuracy using YOLO + CUDA toolkit on edge hardware.",
+                "Designed smart camera surveillance for highway accident detection; automated ambulance dispatch via SMTP alerts · cutting emergency response time by 40%.",
+            ],
+        },
+    ],
+    "education": [
+        {"degree": "M.Tech in Data Science & Engineering", "institution": "BITS Pilani, India", "dates": "Oct 2021 – Oct 2023"},
+        {"degree": "B.E in Computer Science & Engineering", "institution": "OIST Bhopal, India", "dates": "Aug 2015 – Jun 2019"},
+    ],
+    "certifications": [
+        "GCP Professional ML Engineer (Certified Feb 2023)",
+        "Certified MLOps Developer – Dataiku",
+        "IBM Professional Data Science Certification",
+        "1st Prize – Trizetto Hackathon (Patient Data Integration · 95% approval rate)",
+        "OpenAI Whisper Hackathon – Hearing-impaired accessibility app",
+        "Secretary · Toastmasters Club  ·  Speaker · PyData Conference",
+    ],
+}
+
+
 class ResumeFormatter:
-    """Handles reading resume template and writing tailored versions with perfect formatting.
+    """Builds ATS-optimized 2-page DOCX resume with hyperlinks and consistent formatting."""
 
-    Design principles:
-    - Single template DOCX with defined sections
-    - Preserves original formatting, fonts, spacing
-    - Only modifies content text, not structure
-    - Ensures ATS-friendly output (no tables, text boxes, or images in critical areas)
-    - Clean alignment and consistent spacing
-    """
-
-    # Standard resume section identifiers
-    SECTION_HEADERS = [
-        "summary", "profile", "objective",
-        "experience", "work experience", "professional experience",
-        "skills", "technical skills", "core competencies",
-        "projects", "key projects",
-        "education",
-        "certifications", "certificates",
-        "achievements", "awards",
-    ]
-
-    def __init__(self, template_path: str):
-        self.template_path = Path(template_path)
-        if not self.template_path.exists():
-            raise FileNotFoundError(f"Resume template not found: {template_path}")
-        self.template_doc = Document(str(self.template_path))
+    def __init__(self, template_path: str = None):
+        self.output_dir = Path("data/generated-resumes")
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.resume_data = RESUME_DATA
 
     def read_sections(self) -> dict[str, str]:
-        """Read the template and extract sections as text."""
-        sections: dict[str, str] = {}
-        current_section = "header"
-        current_content: list[str] = []
-
-        for para in self.template_doc.paragraphs:
-            text = para.text.strip()
-            if not text:
-                current_content.append("")
-                continue
-
-            # Check if this is a section header
-            if self._is_section_header(para):
-                # Save previous section
-                if current_content:
-                    sections[current_section] = "\n".join(current_content).strip()
-                current_section = text.lower()
-                current_content = []
-            else:
-                current_content.append(text)
-
-        # Save last section
-        if current_content:
-            sections[current_section] = "\n".join(current_content).strip()
-
+        """Return resume sections as text for the tailoring agent."""
+        sections = {
+            "header": f"{self.resume_data['name']}\n{self.resume_data['title']}",
+            "professional summary": self._get_base_summary(),
+            "technical skills": "\n".join(f"{k}: {v}" for k, v in self.resume_data["skills"].items()),
+            "professional experience": self._get_experience_text(),
+            "research projects": self._get_projects_text(),
+            "education": "\n".join(f"{e['degree']} · {e['institution']} · {e['dates']}" for e in self.resume_data["education"]),
+            "certifications & awards": "\n".join(self.resume_data["certifications"]),
+        }
         return sections
 
     def write_tailored_resume(self, tailoring_result: TailoringResult) -> str:
-        """Write a new DOCX with tailored content, preserving formatting."""
-        # Deep copy the template document
-        doc = copy.deepcopy(self.template_doc)
+        """Write a new tailored DOCX using the structured approach."""
+        tailored_map = {s.section_name.lower(): s for s in tailoring_result.sections_modified}
 
-        # Map tailored sections by name
-        tailored_map: dict[str, TailoredSection] = {
-            section.section_name.lower(): section
-            for section in tailoring_result.sections_modified
-        }
+        summary = None
+        for key in ("summary", "professional summary", "profile"):
+            if key in tailored_map:
+                summary = tailored_map[key].tailored_content
+                break
 
-        # Walk through document and replace section content
-        current_section = "header"
-        section_start_idx = -1
-
-        paragraphs = doc.paragraphs
-        i = 0
-        while i < len(paragraphs):
-            para = paragraphs[i]
-            text = para.text.strip()
-
-            if self._is_section_header(para):
-                # If we have a tailored version of the previous section, apply it
-                if current_section in tailored_map:
-                    self._replace_section_content(
-                        doc, section_start_idx + 1, i, tailored_map[current_section]
-                    )
-                    # Recalculate after modification
-                    paragraphs = doc.paragraphs
-                    i = self._find_next_section_header(paragraphs, section_start_idx + 1)
-                    if i == -1:
-                        break
-
-                current_section = text.lower()
-                section_start_idx = i
-
-            i += 1
-
-        # Handle last section
-        if current_section in tailored_map:
-            self._replace_section_content(
-                doc, section_start_idx + 1, len(doc.paragraphs), tailored_map[current_section]
-            )
-
-        # Apply final formatting pass
-        self._apply_formatting_pass(doc)
-
-        # Save
+        doc = self._build_document(tailored_summary=summary, company=tailoring_result.company)
         output_path = tailoring_result.output_path
         Path(output_path).parent.mkdir(parents=True, exist_ok=True)
         doc.save(output_path)
-
         return output_path
 
-    def _is_section_header(self, paragraph) -> bool:
-        """Determine if a paragraph is a section header."""
-        text = paragraph.text.strip().lower()
+    def build_tailored_resume(self, company: str, title: str, tailored_summary: str = None, extra_skill_keywords: list[str] = None) -> str:
+        """Build a tailored resume DOCX directly."""
+        doc = self._build_document(tailored_summary=tailored_summary, extra_skill_keywords=extra_skill_keywords, company=company)
+        safe_company = re.sub(r"[^\w\-]", "_", company)
+        safe_title = re.sub(r"[^\w\-]", "_", title)[:40]
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M")
+        filename = f"MohammadSheriff_{safe_company}_{safe_title}_{timestamp}"
+        docx_path = self.output_dir / f"{filename}.docx"
+        doc.save(str(docx_path))
+        return str(docx_path)
 
-        # Check by content
-        for header in self.SECTION_HEADERS:
-            if text == header or text.startswith(header):
-                return True
-
-        # Check by formatting (bold, larger font, or heading style)
-        if paragraph.style and "heading" in paragraph.style.name.lower():
-            return True
-
-        # Check if all runs are bold
-        if paragraph.runs and all(run.bold for run in paragraph.runs if run.text.strip()):
-            if len(text) < 40:  # Headers are usually short
-                return True
-
-        return False
-
-    def _replace_section_content(
-        self, doc: Document, start_idx: int, end_idx: int, tailored: TailoredSection
-    ):
-        """Replace content between section headers with tailored content."""
-        # Get the new content lines
-        new_lines = [line for line in tailored.tailored_content.split("\n") if line.strip()]
-
-        # Get paragraphs to replace (excluding headers)
-        body = doc.element.body
-        paragraphs = doc.paragraphs
-
-        # Count content paragraphs in range
-        content_paras = []
-        for idx in range(start_idx, min(end_idx, len(paragraphs))):
-            if not self._is_section_header(paragraphs[idx]):
-                content_paras.append(idx)
-
-        # Replace content in existing paragraphs where possible
-        for i, line_idx in enumerate(content_paras):
-            if i < len(new_lines):
-                para = paragraphs[line_idx]
-                self._set_paragraph_text(para, new_lines[i])
-            else:
-                # Remove extra paragraphs (set to empty, will be cleaned)
-                paragraphs[line_idx].text = ""
-
-        # If we need more paragraphs than exist, add them
-        if len(new_lines) > len(content_paras) and content_paras:
-            last_para = paragraphs[content_paras[-1]]
-            for i in range(len(content_paras), len(new_lines)):
-                new_para = copy.deepcopy(last_para._element)
-                # Clear and set text
-                for child in list(new_para):
-                    new_para.remove(child)
-                last_para._element.addnext(new_para)
-                # Set text on the new paragraph
-                from docx.oxml.ns import qn
-                from docx.oxml import OxmlElement
-
-                run = OxmlElement("w:r")
-                text_el = OxmlElement("w:t")
-                text_el.text = new_lines[i]
-                run.append(text_el)
-                new_para.append(run)
-
-    def _set_paragraph_text(self, paragraph, new_text: str):
-        """Set paragraph text while preserving formatting of first run."""
-        if paragraph.runs:
-            # Preserve formatting from first run
-            first_run = paragraph.runs[0]
-            # Clear all runs
-            for run in paragraph.runs:
-                run.text = ""
-            # Set text in first run
-            first_run.text = new_text
-        else:
-            paragraph.text = new_text
-
-    def _find_next_section_header(self, paragraphs, start_idx: int) -> int:
-        """Find the next section header after start_idx."""
-        for i in range(start_idx, len(paragraphs)):
-            if self._is_section_header(paragraphs[i]):
-                return i
-        return -1
-
-    def _apply_formatting_pass(self, doc: Document):
-        """Final formatting pass to ensure consistency."""
-        for para in doc.paragraphs:
-            # Ensure consistent bullet point formatting
-            text = para.text.strip()
-            if text.startswith("•") or text.startswith("-") or text.startswith("▪"):
-                # Ensure bullet points have consistent left indent
-                if para.paragraph_format.left_indent is None:
-                    para.paragraph_format.left_indent = Cm(0.5)
-                # Ensure consistent spacing after bullets
-                para.paragraph_format.space_after = Pt(2)
-
-            # Remove empty paragraphs (cleanup)
-            if not text and para.paragraph_format.space_before is None:
-                para.paragraph_format.space_before = Pt(0)
-                para.paragraph_format.space_after = Pt(0)
-
-    def create_default_template(self, output_path: str, user_data: dict):
-        """Create a professionally formatted resume template from user data."""
+    def _build_document(self, tailored_summary=None, extra_skill_keywords=None, company="") -> Document:
+        """Build complete DOCX following exact original format."""
         doc = Document()
 
-        # Set default font
+        for section in doc.sections:
+            section.top_margin = Cm(1.0)
+            section.bottom_margin = Cm(1.0)
+            section.left_margin = Cm(1.5)
+            section.right_margin = Cm(1.5)
+
         style = doc.styles["Normal"]
-        font = style.font
-        font.name = "Calibri"
-        font.size = Pt(10.5)
-        font.color.rgb = RGBColor(0x33, 0x33, 0x33)
+        style.font.name = "Arial"
+        style.font.size = Pt(9.5)
+        style.paragraph_format.space_after = Pt(0)
+        style.paragraph_format.space_before = Pt(0)
 
-        # Set margins
-        sections = doc.sections
-        for section in sections:
-            section.top_margin = Cm(1.5)
-            section.bottom_margin = Cm(1.5)
-            section.left_margin = Cm(2.0)
-            section.right_margin = Cm(2.0)
+        self._add_header(doc)
+        self._add_section_heading(doc, "PROFESSIONAL SUMMARY")
+        self._add_summary(doc, tailored_summary)
+        self._add_section_heading(doc, "TECHNICAL SKILLS")
+        self._add_skills(doc, extra_skill_keywords)
+        self._add_section_heading(doc, "PROFESSIONAL EXPERIENCE")
+        for exp in self.resume_data["experience"]:
+            if exp.get("page_break_before"):
+                p = doc.add_paragraph()
+                p.add_run().add_break(WD_BREAK.PAGE)
+            self._add_experience_entry(doc, exp)
+        self._add_section_heading(doc, "RESEARCH PROJECTS")
+        for proj in self.resume_data["projects"]:
+            self._add_project_entry(doc, proj)
+        self._add_section_heading(doc, "EDUCATION")
+        for edu in self.resume_data["education"]:
+            p = doc.add_paragraph()
+            self._set_spacing(p, before=3, after=2)
+            run = p.add_run(edu["degree"])
+            run.font.bold = True
+            run.font.size = Pt(9.5)
+            p.add_run(f"  ·  {edu['institution']}  ·  {edu['dates']}").font.size = Pt(9.5)
+        self._add_section_heading(doc, "CERTIFICATIONS & AWARDS")
+        for cert in self.resume_data["certifications"]:
+            self._add_bullet(doc, cert)
 
-        # Name
-        name_para = doc.add_paragraph()
-        name_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        name_run = name_para.add_run(user_data.get("name", "Your Name"))
-        name_run.bold = True
-        name_run.font.size = Pt(18)
-        name_run.font.color.rgb = RGBColor(0x1A, 0x1A, 0x2E)
+        return doc
 
-        # Contact info
-        contact_para = doc.add_paragraph()
-        contact_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        contact_parts = []
-        if user_data.get("email"):
-            contact_parts.append(user_data["email"])
-        if user_data.get("phone"):
-            contact_parts.append(user_data["phone"])
-        if user_data.get("linkedin"):
-            contact_parts.append(user_data["linkedin"])
-        if user_data.get("github"):
-            contact_parts.append(user_data["github"])
-        if user_data.get("location"):
-            contact_parts.append(user_data["location"])
+    def _add_header(self, doc):
+        p = doc.add_paragraph()
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        self._set_spacing(p, after=1)
+        run = p.add_run(self.resume_data["name"])
+        run.font.size = Pt(16)
+        run.font.bold = True
 
-        contact_run = contact_para.add_run(" | ".join(contact_parts))
-        contact_run.font.size = Pt(9)
-        contact_run.font.color.rgb = RGBColor(0x55, 0x55, 0x55)
+        p = doc.add_paragraph()
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        self._set_spacing(p, after=2)
+        run = p.add_run(self.resume_data["title"])
+        run.font.size = Pt(10.5)
+        run.font.color.rgb = RGBColor(60, 60, 60)
 
-        # Professional Summary
-        self._add_section_header(doc, "PROFESSIONAL SUMMARY")
-        summary_para = doc.add_paragraph()
-        summary_para.add_run(
-            user_data.get("summary", "Experienced software engineer with expertise in...")
-        )
-        summary_para.paragraph_format.space_after = Pt(6)
+        p = doc.add_paragraph()
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        self._set_spacing(p, after=6)
+        p.add_run(f"{self.resume_data['phone']} · {self.resume_data['email']} · ").font.size = Pt(9)
+        self._add_hyperlink(p, "LinkedIn", self.resume_data["linkedin_url"], Pt(9))
+        p.add_run(" · ").font.size = Pt(9)
+        self._add_hyperlink(p, "github.com/sheriff786", self.resume_data["github_url"], Pt(9))
+        p.add_run(" · ").font.size = Pt(9)
+        self._add_hyperlink(p, "Portfolio", self.resume_data["portfolio_url"], Pt(9))
 
-        # Technical Skills
-        self._add_section_header(doc, "TECHNICAL SKILLS")
-        skills = user_data.get("skills", {})
-        for category, skill_list in skills.items():
-            skill_para = doc.add_paragraph()
-            cat_run = skill_para.add_run(f"{category}: ")
-            cat_run.bold = True
-            skill_para.add_run(", ".join(skill_list))
-            skill_para.paragraph_format.space_after = Pt(2)
+    def _add_summary(self, doc, tailored_summary=None):
+        text = tailored_summary or self._get_base_summary()
+        p = doc.add_paragraph()
+        self._set_spacing(p, before=3, after=4)
+        if "authentica" in text:
+            parts = text.split("authentica", 1)
+            p.add_run(parts[0]).font.size = Pt(9.5)
+            self._add_hyperlink(p, "authentica", self.resume_data["authentica_url"], Pt(9.5))
+            p.add_run(parts[1]).font.size = Pt(9.5)
+        else:
+            p.add_run(text).font.size = Pt(9.5)
 
-        # Experience
-        self._add_section_header(doc, "PROFESSIONAL EXPERIENCE")
-        for exp in user_data.get("experience", []):
-            # Company and title line
-            exp_para = doc.add_paragraph()
-            title_run = exp_para.add_run(f"{exp.get('title', '')} | ")
-            title_run.bold = True
-            exp_para.add_run(exp.get("company", ""))
-            # Add location/date on same line with tab
-            exp_para.add_run(f"\t{exp.get('location', '')} | {exp.get('dates', '')}")
-            exp_para.paragraph_format.space_after = Pt(2)
+    def _add_skills(self, doc, extra_keywords=None):
+        skills = dict(self.resume_data["skills"])
+        if extra_keywords:
+            genai = skills.get("GenAI & LLMs", "")
+            for kw in extra_keywords:
+                if kw.lower() not in genai.lower():
+                    genai += f" · {kw}"
+            skills["GenAI & LLMs"] = genai
 
-            # Bullet points
-            for bullet in exp.get("bullets", []):
-                bullet_para = doc.add_paragraph()
-                bullet_para.add_run(f"• {bullet}")
-                bullet_para.paragraph_format.left_indent = Cm(0.5)
-                bullet_para.paragraph_format.space_after = Pt(1)
+        for category, items in skills.items():
+            p = doc.add_paragraph()
+            self._set_spacing(p, before=1, after=1)
+            run = p.add_run(f"{category}:  ")
+            run.font.bold = True
+            run.font.size = Pt(9.5)
+            p.add_run(items).font.size = Pt(9.5)
 
-        # Projects
-        if user_data.get("projects"):
-            self._add_section_header(doc, "KEY PROJECTS")
-            for project in user_data["projects"]:
-                proj_para = doc.add_paragraph()
-                proj_run = proj_para.add_run(f"{project.get('name', '')} ")
-                proj_run.bold = True
-                if project.get("tech"):
-                    proj_para.add_run(f"| {project['tech']}")
-                proj_para.paragraph_format.space_after = Pt(2)
+    def _add_experience_entry(self, doc, exp):
+        p = doc.add_paragraph()
+        self._set_spacing(p, before=6 if not exp.get("page_break_before") else 0, after=0)
+        run = p.add_run(f"{exp['company']} · {exp['location']}")
+        run.font.bold = True
+        run.font.size = Pt(10)
 
-                for bullet in project.get("bullets", []):
-                    bullet_para = doc.add_paragraph()
-                    bullet_para.add_run(f"• {bullet}")
-                    bullet_para.paragraph_format.left_indent = Cm(0.5)
-                    bullet_para.paragraph_format.space_after = Pt(1)
+        p = doc.add_paragraph()
+        self._set_spacing(p, before=1, after=0)
+        run = p.add_run(exp["title"])
+        run.font.bold = True
+        run.font.size = Pt(9.5)
 
-        # Education
-        self._add_section_header(doc, "EDUCATION")
-        for edu in user_data.get("education", []):
-            edu_para = doc.add_paragraph()
-            degree_run = edu_para.add_run(f"{edu.get('degree', '')} ")
-            degree_run.bold = True
-            edu_para.add_run(f"| {edu.get('institution', '')} | {edu.get('year', '')}")
-            edu_para.paragraph_format.space_after = Pt(2)
+        p = doc.add_paragraph()
+        self._set_spacing(p, before=0, after=2)
+        run = p.add_run(exp["dates"])
+        run.font.size = Pt(9.5)
+        run.font.color.rgb = RGBColor(80, 80, 80)
 
-        # Certifications
-        if user_data.get("certifications"):
-            self._add_section_header(doc, "CERTIFICATIONS")
-            for cert in user_data["certifications"]:
-                cert_para = doc.add_paragraph()
-                cert_para.add_run(f"• {cert}")
-                cert_para.paragraph_format.left_indent = Cm(0.5)
-                cert_para.paragraph_format.space_after = Pt(1)
+        if exp.get("context"):
+            p = doc.add_paragraph()
+            self._set_spacing(p, before=1, after=2)
+            run = p.add_run(exp["context"])
+            run.font.italic = True
+            run.font.size = Pt(9.5)
 
-        # Save template
-        Path(output_path).parent.mkdir(parents=True, exist_ok=True)
-        doc.save(output_path)
-        return output_path
+        for bullet in exp["bullets"]:
+            self._add_bullet(doc, bullet)
 
-    def _add_section_header(self, doc: Document, title: str):
-        """Add a consistently formatted section header."""
-        # Add separator line
-        sep_para = doc.add_paragraph()
-        sep_para.paragraph_format.space_before = Pt(8)
-        sep_para.paragraph_format.space_after = Pt(0)
+    def _add_project_entry(self, doc, proj):
+        p = doc.add_paragraph()
+        self._set_spacing(p, before=4, after=1)
+        run = p.add_run(proj["title"])
+        run.font.bold = True
+        run.font.size = Pt(9.5)
+        run = p.add_run(f"  |  {proj['tech']}")
+        run.font.size = Pt(9)
+        run.font.color.rgb = RGBColor(80, 80, 80)
+        if proj.get("github_url"):
+            p.add_run("    ").font.size = Pt(8.5)
+            self._add_hyperlink(p, "View on GitHub →", proj["github_url"], Pt(8.5))
+        for bullet in proj["bullets"]:
+            self._add_bullet(doc, bullet)
 
-        # Add header
-        header_para = doc.add_paragraph()
-        header_run = header_para.add_run(title)
-        header_run.bold = True
-        header_run.font.size = Pt(11)
-        header_run.font.color.rgb = RGBColor(0x1A, 0x1A, 0x2E)
-        header_para.paragraph_format.space_after = Pt(4)
-        header_para.paragraph_format.space_before = Pt(2)
-
-        # Bottom border for section header
-        from docx.oxml.ns import qn
-        from docx.oxml import OxmlElement
-
-        pPr = header_para._element.get_or_add_pPr()
-        pBdr = OxmlElement("w:pBdr")
-        bottom = OxmlElement("w:bottom")
-        bottom.set(qn("w:val"), "single")
-        bottom.set(qn("w:sz"), "4")
-        bottom.set(qn("w:space"), "1")
-        bottom.set(qn("w:color"), "1A1A2E")
+    def _add_section_heading(self, doc, text):
+        p = doc.add_paragraph()
+        self._set_spacing(p, before=8, after=3)
+        run = p.add_run(text)
+        run.font.bold = True
+        run.font.size = Pt(10.5)
+        run.font.color.rgb = RGBColor(0, 0, 0)
+        pPr = p._p.get_or_add_pPr()
+        pBdr = pPr.makeelement(qn("w:pBdr"), {})
+        bottom = pBdr.makeelement(qn("w:bottom"), {
+            qn("w:val"): "single", qn("w:sz"): "4",
+            qn("w:space"): "1", qn("w:color"): "333333",
+        })
         pBdr.append(bottom)
         pPr.append(pBdr)
+
+    def _add_bullet(self, doc, text, indent=0.4):
+        p = doc.add_paragraph()
+        p.paragraph_format.left_indent = Cm(indent)
+        self._set_spacing(p, before=1, after=1)
+        p.add_run("▸ ").font.size = Pt(9.5)
+        p.add_run(text).font.size = Pt(9.5)
+
+    def _add_hyperlink(self, paragraph, text, url, font_size=Pt(9)):
+        part = paragraph.part
+        r_id = part.relate_to(url, "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink", is_external=True)
+        hyperlink = OxmlElement("w:hyperlink")
+        hyperlink.set(qn("r:id"), r_id)
+        new_run = OxmlElement("w:r")
+        rPr = OxmlElement("w:rPr")
+        c = OxmlElement("w:color")
+        c.set(qn("w:val"), "0066CC")
+        rPr.append(c)
+        u = OxmlElement("w:u")
+        u.set(qn("w:val"), "single")
+        rPr.append(u)
+        sz = OxmlElement("w:sz")
+        sz.set(qn("w:val"), str(int(font_size.pt * 2)))
+        rPr.append(sz)
+        new_run.append(rPr)
+        new_run.text = text
+        hyperlink.append(new_run)
+        paragraph._p.append(hyperlink)
+
+    def _set_spacing(self, p, before=0, after=0):
+        p.paragraph_format.space_before = Pt(before)
+        p.paragraph_format.space_after = Pt(after)
+
+    def _get_base_summary(self):
+        return (
+            "Senior Data Scientist & AI/ML Engineer with 6+ years of experience. "
+            "I build AI systems that move business metrics — not just demos. "
+            "Specializing in NLP · LLMs · and production MLOps, I have shipped enterprise-grade "
+            "GenAI systems that delivered $1M+ revenue uplift · cut churn by 40% · and accelerated "
+            "model iteration by 60% across healthcare · finance · and retail. "
+            "Open-source author: published authentica on PyPI, actively used in production "
+            "at Businessolver (Healthcare Benefits SaaS)."
+        )
+
+    def _get_experience_text(self):
+        lines = []
+        for exp in self.resume_data["experience"]:
+            lines.append(f"{exp['company']} · {exp['location']}")
+            lines.append(f"{exp['title']} | {exp['dates']}")
+            if exp.get("context"):
+                lines.append(exp["context"])
+            for b in exp["bullets"]:
+                lines.append(f"▸ {b}")
+            lines.append("")
+        return "\n".join(lines)
+
+    def _get_projects_text(self):
+        lines = []
+        for proj in self.resume_data["projects"]:
+            lines.append(f"{proj['title']} | {proj['tech']}")
+            for b in proj["bullets"]:
+                lines.append(f"▸ {b}")
+            lines.append("")
+        return "\n".join(lines)

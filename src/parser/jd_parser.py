@@ -15,8 +15,8 @@ class ParsedJobDescription(BaseModel):
     seniority_level: str  # junior, mid, senior, staff, principal
     years_experience_min: int | None
     years_experience_max: int | None
-    location: str
-    remote_policy: str  # remote, hybrid, onsite
+    location: str | None = ""
+    remote_policy: str | None = ""  # remote, hybrid, onsite
     team_size: str | None
     company_stage: str | None  # startup, growth, enterprise
     education_required: str | None

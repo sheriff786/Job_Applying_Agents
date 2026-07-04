@@ -1,0 +1,213 @@
+{
+  "timestamp": "2026-07-04T23:58:16.790931",
+  "total_scored": 10,
+  "recommended_count": 3,
+  "all_scored": [
+    {
+      "company": "databricks",
+      "title": "AI Engineer - FDE (Forward Deployed Engineer)",
+      "score": 0.92,
+      "should_apply": true,
+      "recommendation": "apply",
+      "url": "https://databricks.com/company/careers/open-positions/job?gh_jid=8298792002",
+      "location": "Sydney, Australia",
+      "matched_skills": [
+        "GenAI application development",
+        "RAG",
+        "fine-tuning",
+        "production-grade GenAI deployment",
+        "data science",
+        "machine learning",
+        "LangChain",
+        "pandas",
+        "scikit-learn",
+        "PyTorch",
+        "AWS",
+        "GCP"
+      ],
+      "missing_skills": [
+        "multi-agent systems",
+        "Text2SQL",
+        "Databricks Intelligence Platform",
+        "Apache Spark",
+        "Azure"
+      ]
+    },
+    {
+      "company": "databricks",
+      "title": "AI Engineer - FDE (Forward Deployed Engineer)",
+      "score": 0.92,
+      "should_apply": true,
+      "recommendation": "apply",
+      "url": "https://databricks.com/company/careers/open-positions/job?gh_jid=8330188002",
+      "location": "Melbourne, Australia",
+      "matched_skills": [
+        "GenAI application development",
+        "RAG",
+        "fine-tuning",
+        "production-grade GenAI application deployment",
+        "data science",
+        "machine learning",
+        "communication of technical concepts",
+        "LangChain",
+        "pandas",
+        "scikit-learn",
+        "PyTorch",
+        "AWS",
+        "GCP"
+      ],
+      "missing_skills": [
+        "multi-agent systems",
+        "Text2SQL",
+        "Databricks Intelligence Platform",
+        "Apache Spark",
+        "Azure"
+      ]
+    },
+    {
+      "company": "airbnb",
+      "title": "AI Engineer, Community Support Engineering",
+      "score": 0.84,
+      "should_apply": true,
+      "recommendation": "apply",
+      "url": "https://careers.airbnb.com/positions/7946288?gh_jid=7946288",
+      "location": "China - Remote",
+      "matched_skills": [
+        "AI engineering",
+        "building scalable services",
+        "collaboration with cross-functional teams",
+        "Retrieval-Augmented Generation (RAG) platform"
+      ],
+      "missing_skills": []
+    },
+    {
+      "company": "databricks",
+      "title": "AI Solutions Architect (Pre-sales) - Strategic Accounts",
+      "score": 0.68,
+      "should_apply": false,
+      "recommendation": "maybe",
+      "url": "https://databricks.com/company/careers/open-positions/job?gh_jid=8501390002",
+      "location": "Amsterdam, Netherlands",
+      "matched_skills": [
+        "Technical Strategy",
+        "Leadership"
+      ],
+      "missing_skills": [
+        "Executive Advisory",
+        "Mentorship",
+        "Customer Interactions",
+        "Technical Pre-sales",
+        "Complex Sales Lifecycles",
+        "Use Case Discovery"
+      ]
+    },
+    {
+      "company": "coinbase",
+      "title": "Senior Site Reliability Engineer, Core AI Infrastructure",
+      "score": 0.68,
+      "should_apply": false,
+      "recommendation": "maybe",
+      "url": "https://www.coinbase.com/careers/positions/7847431?gh_jid=7847431",
+      "location": "Remote - USA",
+      "matched_skills": [
+        "Python",
+        "Kubernetes",
+        "CI/CD",
+        "AWS"
+      ],
+      "missing_skills": [
+        "Site Reliability Engineering",
+        "Cloud Infrastructure",
+        "Automation",
+        "Monitoring",
+        "Incident Response",
+        "Observability",
+        "Technical Documentation",
+        "Go"
+      ]
+    },
+    {
+      "company": "robinhood",
+      "title": "Senior Staff Software Developer, Developer Productivity & AI Tooling ",
+      "score": 0.68,
+      "should_apply": false,
+      "recommendation": "maybe",
+      "url": "https://boards.greenhouse.io/robinhood/jobs/6913966?t=gh_src=&gh_jid=6913966",
+      "location": "Toronto, Canada",
+      "matched_skills": [
+        "AI-powered engineering",
+        "AI-assisted development"
+      ],
+      "missing_skills": [
+        "technical leadership",
+        "system architecture",
+        "developer productivity",
+        "developer tooling",
+        "platform infrastructure"
+      ]
+    },
+    {
+      "company": "airbnb",
+      "title": "Machine Learning Engineer, Customer Support Engineering",
+      "score": 0.52,
+      "should_apply": false,
+      "recommendation": "skip",
+      "url": "https://careers.airbnb.com/positions/7826337?gh_jid=7826337",
+      "location": "Remote-USA",
+      "matched_skills": [
+        "Machine Learning",
+        "Artificial Intelligence",
+        "AI model development",
+        "RAG/Search"
+      ],
+      "missing_skills": [
+        "SFT",
+        "Reinforcement learning",
+        "Distillation",
+        "LLM evaluation",
+        "testing automation"
+      ]
+    },
+    {
+      "company": "anthropic",
+      "title": "Anthropic Fellows Program, AI Safety",
+      "score": 0.52,
+      "should_apply": false,
+      "recommendation": "skip",
+      "url": "https://job-boards.greenhouse.io/anthropic/jobs/5183044008",
+      "location": "London, UK; Ontario, CAN; Remote-Friendly, United States; San Francisco, CA",
+      "matched_skills": [
+        "AI research",
+        "engineering talent"
+      ],
+      "missing_skills": [
+        "empirical project work"
+      ]
+    },
+    {
+      "company": "anthropic",
+      "title": "Anthropic Fellows Program, ML Systems & Performance",
+      "score": 0.4,
+      "should_apply": false,
+      "recommendation": "skip",
+      "url": "https://job-boards.greenhouse.io/anthropic/jobs/5183051008",
+      "location": "London, UK; Ontario, CAN; Remote-Friendly, United States; San Francisco, CA",
+      "matched_skills": [],
+      "missing_skills": []
+    },
+    {
+      "company": "anthropic",
+      "title": "Anthropic Fellows Program, AI Security",
+      "score": 0.3,
+      "should_apply": false,
+      "recommendation": "skip",
+      "url": "https://job-boards.greenhouse.io/anthropic/jobs/5030244008",
+      "location": "London, UK; Ontario, CAN; Remote-Friendly, United States; San Francisco, CA",
+      "matched_skills": [],
+      "missing_skills": [
+        "open-source models",
+        "public APIs"
+      ]
+    }
+  ]
+}
