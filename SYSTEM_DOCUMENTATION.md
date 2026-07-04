@@ -46,148 +46,134 @@ The Job Applying Agent is a fully automated pipeline that:
 7. **Tracks** every application through its lifecycle (applied → interview → offer)
 8. **Monitors** Gmail for status replies and auto-creates calendar holds for interviews
 
-**Target:** MAANG/FAANG and product-based companies **outside India**.
+**Target:** Senior Data Scientist · AI/ML Engineer · Principal Data Scientist roles at MAANG/FAANG and product-based companies.
+
+**Candidate Profile:** Mohammad Sheriff Mehmood — 6+ years experience in NLP, LLMs, GenAI, production MLOps. M.Tech from BITS Pilani.
 
 ---
 
 ## Architecture Flow
 
+```mermaid
+flowchart TB
+    %% ─── TRIGGER ───
+    trigger[/"🕐 Pipeline Trigger<br/><i>CLI / API / Scheduled</i>"/]
+    
+    %% ─── INGESTION LAYER ───
+    subgraph ingestion["📥 JOB INGESTION"]
+        direction LR
+        gh["🏢 Greenhouse API<br/><i>Databricks · Anthropic<br/>Airbnb · Stripe · Figma<br/>Coinbase · Robinhood...</i>"]
+        lever["🏢 Lever API<br/><i>Netflix · OpenAI<br/>Scale AI...</i>"]
+        rok["🌐 RemoteOK<br/><i>Free API · remote<br/>engineering jobs</i>"]
+        apify["🔗 Apify Scraper<br/><i>LinkedIn & Indeed<br/>via browser automation</i>"]
+        linkedin["📋 LinkedIn Export<br/><i>Manual JSON/CSV<br/>exports from browser</i>"]
+    end
+
+    %% ─── ORCHESTRATOR ───
+    orch["⚙️ Ingestion Orchestrator<br/><i>Deduplication · Normalization<br/>Location filtering · DB storage</i>"]
+
+    %% ─── PARSING ───
+    parser["🔍 JD Parser (GPT-4o)<br/><i>Extract: skills · tech stack<br/>seniority · keywords · requirements</i>"]
+
+    %% ─── VECTOR STORE ───
+    vectordb["🧠 Vector Store (pgvector)<br/><i>Generate embeddings<br/>Semantic similarity search</i>"]
+
+    %% ─── SCORING ───
+    scorer["📊 Fit Scoring Agent (GPT-4o)<br/><i>Score job vs user_profile.txt<br/>Skills match · Seniority · Location<br/>Threshold: 0.70+</i>"]
+
+    %% ─── DECISION ───
+    decision{{"🚦 Score ≥ 0.70?"}}
+
+    %% ─── TAILORING ───
+    tailor["✍️ Resume Tailoring Agent (GPT-4o)<br/><i>Rewrite summary · Add JD keywords<br/>Optimize for ATS · Keep truthful</i>"]
+
+    %% ─── FORMATTER ───
+    formatter["📄 Resume Formatter<br/><i>Build 2-page DOCX/PDF<br/>Exact template · Hyperlinks<br/>Consistent · formatting · ▸ bullets</i>"]
+
+    %% ─── REVIEW ───
+    review["👁️ Human Review Queue<br/><i>Daily review of tailored apps<br/>Approve / Reject / Edit</i>"]
+
+    %% ─── SUBMISSION ───
+    subgraph submit["📤 SUBMISSION"]
+        direction LR
+        api_submit["🤖 API Submit<br/><i>Greenhouse/Lever<br/>direct API apply</i>"]
+        manual_submit["🖱️ Manual Submit Helper<br/><i>Open URL + pre-fill<br/>instructions for user</i>"]
+    end
+
+    %% ─── TRACKING ───
+    tracker["📈 Application Tracker<br/><i>Status: applied → interview<br/>→ offer → rejected<br/>CSV + DB logging</i>"]
+
+    %% ─── MCP INTEGRATIONS ───
+    subgraph mcp["🔌 MCP INTEGRATIONS"]
+        direction LR
+        gmail["📧 Gmail MCP<br/><i>Monitor inbox for<br/>interview invites ·<br/>rejections · follow-ups</i>"]
+        calendar["📅 Calendar MCP<br/><i>Auto-schedule interviews<br/>Block calendar slots<br/>Send reminders</i>"]
+    end
+
+    %% ─── OUTPUTS ───
+    subgraph outputs["📁 OUTPUT FOLDERS"]
+        direction LR
+        actual["actual-resume/<br/><i>Original PDF<br/>(never modified)</i>"]
+        generated["generated-resumes/<br/><i>Tailored DOCX + PDF<br/>per company/role</i>"]
+        artifacts["artifacts/<br/><i>Scored results · found<br/>jobs · run logs</i>"]
+    end
+
+    %% ─── CONNECTIONS ───
+    trigger --> ingestion
+    gh & lever & rok & apify & linkedin --> orch
+    orch --> parser
+    parser --> vectordb
+    vectordb --> scorer
+    scorer --> decision
+    decision -- "✅ Yes (Apply)" --> tailor
+    decision -- "❌ No (Skip)" --> tracker
+    tailor --> formatter
+    formatter --> outputs
+    formatter --> review
+    review -- "✅ Approved" --> submit
+    review -- "❌ Rejected" --> tracker
+    api_submit & manual_submit --> tracker
+    tracker --> mcp
+    gmail --> tracker
+    calendar --> tracker
+
+    %% ─── STYLING ───
+    classDef trigger fill:#FF6B6B,stroke:#333,color:#fff
+    classDef ingestion fill:#4ECDC4,stroke:#333,color:#fff
+    classDef process fill:#45B7D1,stroke:#333,color:#fff
+    classDef ai fill:#96E6A1,stroke:#333,color:#000
+    classDef decision fill:#FFE66D,stroke:#333,color:#000
+    classDef output fill:#DDA0DD,stroke:#333,color:#000
+    classDef mcp fill:#F7DC6F,stroke:#333,color:#000
+
+    class trigger trigger
+    class gh,lever,rok,apify,linkedin ingestion
+    class orch,vectordb,formatter,review process
+    class parser,scorer,tailor ai
+    class decision decision
+    class actual,generated,artifacts output
+    class gmail,calendar,api_submit,manual_submit mcp
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                       JOB SOURCES                           │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌────────────┐  │
-│  │Greenhouse│  │  Lever   │  │ RemoteOK │  │ Wellfound  │  │
-│  │  (API)   │  │  (API)   │  │  (API)   │  │ (Scraping) │  │
-│  └────┬─────┘  └────┬─────┘  └────┬─────┘  └─────┬──────┘  │
-│       │              │             │              │          │
-│  ┌────┴──────────────┴─────────────┴──────────────┴──────┐  │
-│  │              LinkedIn (Manual Export)                  │  │
-│  └───────────────────────┬───────────────────────────────┘  │
-└──────────────────────────┼──────────────────────────────────┘
-                           │
-                           ▼
-              ┌────────────────────────┐
-              │    INGESTION AGENT     │
-              │  • Fetch from sources  │
-              │  • Deduplicate         │
-              │  • Normalize schema    │
-              │  • Filter out India    │
-              └───────────┬────────────┘
-                          │
-                ┌─────────┴─────────┐
-                │                   │
-                ▼                   ▼
-     ┌──────────────────┐  ┌───────────────────┐
-     │   JD PARSER      │  │   VECTOR STORE    │
-     │   (GPT-4o)       │  │   (pgvector)      │
-     │                  │  │                   │
-     │ Extracts:        │  │ Stores:           │
-     │ • Skills         │  │ • JD embeddings   │
-     │ • Seniority      │  │ • Skill vectors   │
-     │ • Tech stack     │  │                   │
-     │ • Location       │  │ Enables:          │
-     │ • Keywords       │  │ • Similarity      │
-     │ • Remote policy  │  │   search          │
-     └────────┬─────────┘  └───────┬───────────┘
-              │                    │
-              └────────┬───────────┘
-                       │
-                       ▼
-          ┌─────────────────────────┐
-          │   FIT SCORING AGENT    │
-          │                        │
-          │ Weights:               │
-          │ • 40% Skill match      │
-          │ • 20% Seniority match  │
-          │ • 20% Location match   │
-          │ • 20% Company type     │
-          │                        │
-          │ Hard filter: India = 0 │
-          │ Threshold: 0.70        │
-          └───────────┬────────────┘
-                      │
-                      │ (score >= 0.70)
-                      ▼
-        ┌──────────────────────────┐      ┌──────────────┐
-        │  RESUME TAILORING AGENT  │◄────►│  Google Drive │
-        │                          │      │  (Template)   │
-        │ For each section:        │      └──────────────┘
-        │ • Summary → rewrite      │
-        │ • Experience → optimize  │
-        │ • Skills → reorder       │
-        │ • Projects → highlight   │
-        │                          │
-        │ ATS keyword injection    │
-        │ Truthfulness preserved   │
-        └────────────┬─────────────┘
-                     │
-                     ▼
-          ┌──────────────────────┐
-          │  RESUME FORMATTER    │
-          │  (python-docx)       │
-          │                      │
-          │ • Reads DOCX template│
-          │ • Writes tailored    │
-          │   DOCX with perfect  │
-          │   formatting         │
-          │ • Calibri, borders,  │
-          │   spacing, alignment │
-          └──────────┬───────────┘
-                     │
-                     ▼
-          ┌──────────────────────┐
-          │  HUMAN REVIEW QUEUE  │
-          │                      │
-          │ Daily batch review:  │
-          │ • View tailored PDF  │
-          │ • See keyword diff   │
-          │ • Approve / Reject   │
-          │ • Edit if needed     │
-          └──────────┬───────────┘
-                     │
-           ┌─────────┴─────────┐
-           │                   │
-           ▼                   ▼
-┌───────────────────┐ ┌──────────────────┐
-│  API AUTO-SUBMIT  │ │ MANUAL CLICK-    │
-│                   │ │ THROUGH          │
-│ • Greenhouse API  │ │                  │
-│ • Lever API       │ │ • LinkedIn       │
-│ • Ashby API       │ │ • Other portals  │
-│                   │ │ • Step-by-step   │
-│ Automatic         │ │   instructions   │
-└────────┬──────────┘ └────────┬─────────┘
-         │                     │
-         └──────────┬──────────┘
-                    │
-                    ▼
-        ┌───────────────────────┐
-        │  APPLICATION TRACKER  │
-        │                       │
-        │ Tracks:               │
-        │ • Company + Role      │
-        │ • Resume version used │
-        │ • Application status  │
-        │ • Submission method   │
-        │ • Response received   │
-        └───────────┬───────────┘
-                    │
-          ┌─────────┴─────────┐
-          │                   │
-          ▼                   ▼
-┌──────────────────┐ ┌─────────────────┐
-│    GMAIL MCP     │ │  CALENDAR MCP   │
-│                  │ │                 │
-│ Detects:         │ │ Auto-creates:   │
-│ • Rejections     │ │ • Interview     │
-│ • Interview      │ │   events        │
-│   invites        │ │ • Prep blocks   │
-│ • Offers         │ │ • Reminders     │
-│                  │ │                 │
-│ Updates tracker  │ │ Extracts:       │
-│ automatically    │ │ • Meeting links │
-│                  │ │ • Date/time     │
-└──────────────────┘ └─────────────────┘
+
+### Candidate Skill Set (Source of Truth)
+
+| Category | Skills |
+|----------|--------|
+| **Languages** | Python (primary) — TensorFlow · PyTorch · Scikit-learn · NumPy · Pandas · OpenCV · YOLO · CNN |
+| **GenAI & LLMs** | LangChain · LangSmith · OpenAI API · Gemini · RAG · LLMOps · Fine-tuning · Prompt Engineering · Agentic AI · MCP · Transformer Models · Sentence-Transformers · CrewAI · HuggingFace · DSPy · Multi-agent Systems · Text2SQL |
+| **MLOps & Cloud** | MLflow · Docker · Kubernetes · Airflow · GCP (Vertex AI) · AWS (SageMaker · ECS · CodePipeline · Lambda · Comprehend · Textract) · Azure · Apache Spark · CI/CD |
+| **Databases** | PostgreSQL · MongoDB · SQL · ChromaDB · FAISS · Pinecone |
+| **Tools & Other** | Tableau · Weights & Biases · FastAPI · Flask · Django · A/B Testing · REST API Design · Git · React (for ML UIs) |
+
+### Folder Structure
+
+```
+data/
+  actual-resume/         → Original PDF (never modified)
+  generated-resumes/     → Tailored DOCX + PDF per company/role
+  artifacts/             → Scored results · found jobs · run timestamps
+  user_profile.txt       → Candidate profile for fit scoring
+  applications_log.csv   → CSV tracker
 ```
 
 ---
@@ -198,7 +184,7 @@ The Job Applying Agent is a fully automated pipeline that:
 
 **Location:** `src/ingestion/`
 
-**Purpose:** Fetches raw job listings from 5 different sources, normalizes them into a common schema, deduplicates, and stores in PostgreSQL.
+**Purpose:** Fetches raw job listings from 6 different sources, normalizes them into a common schema, deduplicates, and stores in PostgreSQL.
 
 **How it works:**
 
@@ -214,6 +200,7 @@ Source APIs → RawJob objects → Deduplication → Job DB records
 | `remoteok.py` | Fetches from RemoteOK JSON API |
 | `wellfound.py` | Scrapes Wellfound (ex-AngelList) using BeautifulSoup |
 | `linkedin.py` | Parses manually exported LinkedIn job JSONs (no scraping) |
+| `apify_scraper.py` | LinkedIn & Indeed scraping via Apify cloud actors |
 | `orchestrator.py` | Coordinates all fetchers, runs dedup, stores results |
 
 **Deduplication Strategy:**
@@ -221,11 +208,12 @@ Source APIs → RawJob objects → Deduplication → Job DB records
 2. **By company + title** — catches same job posted on multiple platforms
 3. **Content hash** — SHA256 of `company|title|description[:200]` for edge cases
 
-**Pre-configured company boards:**
-- Greenhouse: Google, Meta, Netflix, Stripe, Airbnb, Databricks, Snowflake, Figma, Notion, Vercel, Coinbase, Robinhood, Plaid, Rippling, Ramp (20 companies)
-- Lever: Netflix, Stripe, Figma, OpenAI, Anthropic, Databricks, Anduril, Scale (10 companies)
+**Pre-configured company boards (verified working):**
+- **Greenhouse:** Databricks (66 DS/ML jobs) · Airbnb (27) · Anthropic (49) · Stripe (21) · Figma (21) · Datadog (23) · Coinbase (9) · Robinhood (6) · Discord (2) · Twitch
+- **Lever:** Netflix · OpenAI · Scale AI
+- **Apify:** LinkedIn Jobs Scraper · Indeed Scraper (requires `APIFY_API_TOKEN`)
 
-**Location filter:** Any job with "India" in location is dropped at ingestion time.
+**Location filter:** Configurable via `EXCLUDED_LOCATIONS` in `.env`.
 
 ---
 
@@ -414,49 +402,68 @@ After tailoring, the agent calculates what percentage of JD keywords now appear 
 
 **Location:** `src/resume/formatter.py`
 
-**Purpose:** The formatting engine that reads your DOCX template and writes beautifully formatted tailored versions.
+**Purpose:** Builds ATS-optimized 2-page DOCX/PDF resumes from scratch following the exact original resume template.
 
-**Design philosophy:** Your resume must look like a human crafted it — perfect alignment, consistent spacing, professional fonts, clean section separators.
+**Design philosophy:** Resume must look like a human crafted it — exact template match, consistent formatting, clickable hyperlinks, ATS-parseable structure.
+
+**Template structure (2 pages):**
+
+```
+PAGE 1:
+├── Header (Name · Title · Contact with hyperlinks)
+├── Professional Summary (with authentica PyPI link)
+├── Technical Skills (consistent · separator)
+├── Professional Experience
+│   ├── ValueLabs · Hyderabad (Mar 2025 – Present)
+│   │   └── 4 bullets with metrics (Businessolver embedded)
+│   └── LTIMindtree · Pune (Jan 2024 – Mar 2025)
+│       └── 5 bullets with metrics (GenAI/NLP)
+│
+PAGE 2:
+├── Cognizant · Chennai (Dec 2019 – Jan 2024)
+│   └── 4 bullets with metrics
+├── Research Projects (3-5 with "View on GitHub →" links)
+├── Education (BITS Pilani + OIST Bhopal)
+└── Certifications & Awards
+```
 
 **Formatting specifications:**
 
 | Element | Specification |
 |---------|--------------|
-| **Font** | Calibri 10.5pt, color #333333 |
-| **Name** | 18pt bold, centered, color #1A1A2E |
-| **Contact** | 9pt, centered, gray (#555555), pipe-separated |
-| **Section headers** | 11pt bold, color #1A1A2E, bottom border line |
-| **Margins** | Top/Bottom: 1.5cm, Left/Right: 2.0cm |
-| **Bullet points** | 0.5cm left indent, 2pt spacing after |
-| **Experience title** | Bold title, normal company, tab-aligned date |
+| **Font** | Arial 9.5pt |
+| **Name** | 16pt bold, centered |
+| **Title** | 10.5pt, gray (#3C3C3C), centered |
+| **Contact** | 9pt, centered, clickable hyperlinks (LinkedIn · GitHub · Portfolio) |
+| **Section headers** | 10.5pt bold, black, bottom border (#333333) |
+| **Margins** | Top/Bottom: 1.0cm, Left/Right: 1.5cm |
+| **Bullet marker** | ▸ (triangle) with 0.4cm left indent |
+| **Separator** | · (middle dot) consistently throughout |
+| **Hyperlinks** | Blue (#0066CC), underlined (LinkedIn, GitHub, Portfolio, PyPI, project links) |
+| **Page break** | Before Cognizant (ensures 2-page structure) |
 
-**How formatting works:**
+**Hyperlinks embedded:**
 
-```
-Template DOCX
-    │
-    ▼ (deep copy — original never modified)
-Copy of template
-    │
-    ▼ (identify sections by header detection)
-    │   • Checks paragraph style (Heading styles)
-    │   • Checks if all runs are bold + text < 40 chars
-    │   • Checks against known header names
-    │
-    ▼ (replace content while preserving run formatting)
-    │   • Keeps font, size, bold, color from original runs
-    │   • Only changes the text content
-    │
-    ▼ (final formatting pass)
-    │   • Ensures consistent bullet indentation
-    │   • Cleans empty paragraphs
-    │   • Validates spacing
-    │
-    ▼
-Tailored DOCX saved to data/generated_resumes/
-```
+| Text | URL |
+|------|-----|
+| LinkedIn | linkedin.com/in/mohammad-sheriff/ |
+| github.com/sheriff786 | github.com/sheriff786 |
+| Portfolio | sheriff786.github.io/My_Portfolio_Website/#about |
+| authentica | pypi.org/project/authentica/ |
+| View on GitHub → (per project) | github.com/sheriff786 |
 
-**Template creation:** `job-agent init-template` walks you through an interactive wizard that creates a professionally formatted base DOCX with all the right styles pre-configured.
+**Key methods:**
+
+| Method | Purpose |
+|--------|---------|
+| `read_sections()` | Returns resume text sections for tailoring agent |
+| `write_tailored_resume(result)` | Builds DOCX from TailoringResult |
+| `build_tailored_resume(company, title, ...)` | Direct DOCX build with extra keywords |
+| `_add_hyperlink(paragraph, text, url)` | Adds clickable link via OxmlElement |
+| `_add_bullet(doc, text)` | Adds ▸ formatted bullet |
+| `_add_experience_entry(doc, exp)` | Company · Location → Title → Dates → Context → Bullets |
+
+**Resume data source of truth:** `RESUME_DATA` dict in `formatter.py` contains all experience, projects, education, certifications extracted from the original PDF.
 
 ---
 
@@ -1012,7 +1019,104 @@ SENIORITY_LEVELS=mid,senior,staff
 # Resume paths
 RESUME_TEMPLATE_PATH=./data/resume_template.docx
 RESUME_OUTPUT_DIR=./data/generated_resumes
-```
+```flowchart TB
+    %% ─── TRIGGER ───
+    trigger[/"🕐 Pipeline Trigger<br/><i>CLI / API / Scheduled</i>"/]
+    
+    %% ─── INGESTION LAYER ───
+    subgraph ingestion["📥 JOB INGESTION"]
+        direction LR
+        gh["🏢 Greenhouse API<br/><i>FAANG boards: Databricks,<br/>Anthropic, Airbnb, Stripe...</i>"]
+        lever["🏢 Lever API<br/><i>Netflix, OpenAI,<br/>Scale AI...</i>"]
+        rok["🌐 RemoteOK<br/><i>Free API, remote<br/>engineering jobs</i>"]
+        apify["🔗 Apify Scraper<br/><i>LinkedIn & Indeed<br/>via browser automation</i>"]
+        linkedin["📋 LinkedIn Export<br/><i>Manual JSON/CSV<br/>exports from browser</i>"]
+    end
+
+    %% ─── ORCHESTRATOR ───
+    orch["⚙️ Ingestion Orchestrator<br/><i>Deduplication · Normalization<br/>Location filtering · DB storage</i>"]
+
+    %% ─── PARSING ───
+    parser["🔍 JD Parser (GPT-4o)<br/><i>Extract: skills, tech stack,<br/>seniority, keywords, requirements</i>"]
+
+    %% ─── VECTOR STORE ───
+    vectordb["🧠 Vector Store (pgvector)<br/><i>Generate embeddings<br/>Semantic similarity search</i>"]
+
+    %% ─── SCORING ───
+    scorer["📊 Fit Scoring Agent (GPT-4o)<br/><i>Score job vs user_profile.txt<br/>Skills match · Seniority · Location<br/>Threshold: 0.70+</i>"]
+
+    %% ─── DECISION ───
+    decision{{"🚦 Score ≥ 0.70?"}}
+
+    %% ─── TAILORING ───
+    tailor["✍️ Resume Tailoring Agent (GPT-4o)<br/><i>Rewrite summary · Add JD keywords<br/>Optimize for ATS · Keep truthful</i>"]
+
+    %% ─── FORMATTER ───
+    formatter["📄 Resume Formatter<br/><i>Build 2-page DOCX/PDF<br/>Exact template · Hyperlinks<br/>Consistent · formatting · ▸ bullets</i>"]
+
+    %% ─── REVIEW ───
+    review["👁️ Human Review Queue<br/><i>Daily review of tailored apps<br/>Approve / Reject / Edit</i>"]
+
+    %% ─── SUBMISSION ───
+    subgraph submit["📤 SUBMISSION"]
+        direction LR
+        api_submit["🤖 API Submit<br/><i>Greenhouse/Lever<br/>direct API apply</i>"]
+        manual_submit["🖱️ Manual Submit Helper<br/><i>Open URL + pre-fill<br/>instructions for user</i>"]
+    end
+
+    %% ─── TRACKING ───
+    tracker["📈 Application Tracker<br/><i>Status: applied → interview<br/>→ offer → rejected<br/>CSV + DB logging</i>"]
+
+    %% ─── MCP INTEGRATIONS ───
+    subgraph mcp["🔌 MCP INTEGRATIONS"]
+        direction LR
+        gmail["📧 Gmail MCP<br/><i>Monitor inbox for<br/>interview invites,<br/>rejections, follow-ups</i>"]
+        calendar["📅 Calendar MCP<br/><i>Auto-schedule interviews<br/>Block calendar slots<br/>Send reminders</i>"]
+    end
+
+    %% ─── OUTPUTS ───
+    subgraph outputs["📁 OUTPUT FOLDERS"]
+        direction LR
+        actual["actual-resume/<br/><i>Original PDF<br/>(never modified)</i>"]
+        generated["generated-resumes/<br/><i>Tailored DOCX + PDF<br/>per company/role</i>"]
+        artifacts["artifacts/<br/><i>Scored results, found<br/>jobs, run logs</i>"]
+    end
+
+    %% ─── CONNECTIONS ───
+    trigger --> ingestion
+    gh & lever & rok & apify & linkedin --> orch
+    orch --> parser
+    parser --> vectordb
+    vectordb --> scorer
+    scorer --> decision
+    decision -- "✅ Yes (Apply)" --> tailor
+    decision -- "❌ No (Skip)" --> tracker
+    tailor --> formatter
+    formatter --> outputs
+    formatter --> review
+    review -- "✅ Approved" --> submit
+    review -- "❌ Rejected" --> tracker
+    api_submit & manual_submit --> tracker
+    tracker --> mcp
+    gmail --> tracker
+    calendar --> tracker
+
+    %% ─── STYLING ───
+    classDef trigger fill:#FF6B6B,stroke:#333,color:#fff
+    classDef ingestion fill:#4ECDC4,stroke:#333,color:#fff
+    classDef process fill:#45B7D1,stroke:#333,color:#fff
+    classDef ai fill:#96E6A1,stroke:#333,color:#000
+    classDef decision fill:#FFE66D,stroke:#333,color:#000
+    classDef output fill:#DDA0DD,stroke:#333,color:#000
+    classDef mcp fill:#F7DC6F,stroke:#333,color:#000
+
+    class trigger trigger
+    class gh,lever,rok,apify,linkedin ingestion
+    class orch,vectordb,formatter,review process
+    class parser,scorer,tailor ai
+    class decision decision
+    class actual,generated,artifacts output
+    class gmail,calendar,api_submit,manual_submit mcp
 
 ---
 
@@ -1037,3 +1141,198 @@ docker-compose up -d
 ```bash
 docker-compose up -d db redis
 ```
+flowchart TB
+    %% ─── TRIGGER ───
+    trigger[/"🕐 Pipeline Trigger<br/><i>CLI / API / Scheduled</i>"/]
+    
+    %% ─── INGESTION LAYER ───
+    subgraph ingestion["📥 JOB INGESTION"]
+        direction LR
+        gh["🏢 Greenhouse API<br/><i>FAANG boards: Databricks,<br/>Anthropic, Airbnb, Stripe...</i>"]
+        lever["🏢 Lever API<br/><i>Netflix, OpenAI,<br/>Scale AI...</i>"]
+        rok["🌐 RemoteOK<br/><i>Free API, remote<br/>engineering jobs</i>"]
+        apify["🔗 Apify Scraper<br/><i>LinkedIn & Indeed<br/>via browser automation</i>"]
+        linkedin["📋 LinkedIn Export<br/><i>Manual JSON/CSV<br/>exports from browser</i>"]
+    end
+
+    %% ─── ORCHESTRATOR ───
+    orch["⚙️ Ingestion Orchestrator<br/><i>Deduplication · Normalization<br/>Location filtering · DB storage</i>"]
+
+    %% ─── PARSING ───
+    parser["🔍 JD Parser (GPT-4o)<br/><i>Extract: skills, tech stack,<br/>seniority, keywords, requirements</i>"]
+
+    %% ─── VECTOR STORE ───
+    vectordb["🧠 Vector Store (pgvector)<br/><i>Generate embeddings<br/>Semantic similarity search</i>"]
+
+    %% ─── SCORING ───
+    scorer["📊 Fit Scoring Agent (GPT-4o)<br/><i>Score job vs user_profile.txt<br/>Skills match · Seniority · Location<br/>Threshold: 0.70+</i>"]
+
+    %% ─── DECISION ───
+    decision{{"🚦 Score ≥ 0.70?"}}
+
+    %% ─── TAILORING ───
+    tailor["✍️ Resume Tailoring Agent (GPT-4o)<br/><i>Rewrite summary · Add JD keywords<br/>Optimize for ATS · Keep truthful</i>"]
+
+    %% ─── FORMATTER ───
+    formatter["📄 Resume Formatter<br/><i>Build 2-page DOCX/PDF<br/>Exact template · Hyperlinks<br/>Consistent · formatting · ▸ bullets</i>"]
+
+    %% ─── REVIEW ───
+    review["👁️ Human Review Queue<br/><i>Daily review of tailored apps<br/>Approve / Reject / Edit</i>"]
+
+    %% ─── SUBMISSION ───
+    subgraph submit["📤 SUBMISSION"]
+        direction LR
+        api_submit["🤖 API Submit<br/><i>Greenhouse/Lever<br/>direct API apply</i>"]
+        manual_submit["🖱️ Manual Submit Helper<br/><i>Open URL + pre-fill<br/>instructions for user</i>"]
+    end
+
+    %% ─── TRACKING ───
+    tracker["📈 Application Tracker<br/><i>Status: applied → interview<br/>→ offer → rejected<br/>CSV + DB logging</i>"]
+
+    %% ─── MCP INTEGRATIONS ───
+    subgraph mcp["🔌 MCP INTEGRATIONS"]
+        direction LR
+        gmail["📧 Gmail MCP<br/><i>Monitor inbox for<br/>interview invites,<br/>rejections, follow-ups</i>"]
+        calendar["📅 Calendar MCP<br/><i>Auto-schedule interviews<br/>Block calendar slots<br/>Send reminders</i>"]
+    end
+
+    %% ─── OUTPUTS ───
+    subgraph outputs["📁 OUTPUT FOLDERS"]
+        direction LR
+        actual["actual-resume/<br/><i>Original PDF<br/>(never modified)</i>"]
+        generated["generated-resumes/<br/><i>Tailored DOCX + PDF<br/>per company/role</i>"]
+        artifacts["artifacts/<br/><i>Scored results, found<br/>jobs, run logs</i>"]
+    end
+
+    %% ─── CONNECTIONS ───
+    trigger --> ingestion
+    gh & lever & rok & apify & linkedin --> orch
+    orch --> parser
+    parser --> vectordb
+    vectordb --> scorer
+    scorer --> decision
+    decision -- "✅ Yes (Apply)" --> tailor
+    decision -- "❌ No (Skip)" --> tracker
+    tailor --> formatter
+    formatter --> outputs
+    formatter --> review
+    review -- "✅ Approved" --> submit
+    review -- "❌ Rejected" --> tracker
+    api_submit & manual_submit --> tracker
+    tracker --> mcp
+    gmail --> tracker
+    calendar --> tracker
+
+    %% ─── STYLING ───
+    classDef trigger fill:#FF6B6B,stroke:#333,color:#fff
+    classDef ingestion fill:#4ECDC4,stroke:#333,color:#fff
+    classDef process fill:#45B7D1,stroke:#333,color:#fff
+    classDef ai fill:#96E6A1,stroke:#333,color:#000
+    classDef decision fill:#FFE66D,stroke:#333,color:#000
+    classDef output fill:#DDA0DD,stroke:#333,color:#000
+    classDef mcp fill:#F7DC6F,stroke:#333,color:#000
+
+    class trigger trigger
+    class gh,lever,rok,apify,linkedin ingestion
+    class orch,vectordb,formatter,review process
+    class parser,scorer,tailor ai
+    class decision decision
+    class actual,generated,artifacts output
+    class gmail,calendar,api_submit,manual_submit mcpflowchart TB
+    %% ─── TRIGGER ───
+    trigger[/"🕐 Pipeline Trigger<br/><i>CLI / API / Scheduled</i>"/]
+    
+    %% ─── INGESTION LAYER ───
+    subgraph ingestion["📥 JOB INGESTION"]
+        direction LR
+        gh["🏢 Greenhouse API<br/><i>FAANG boards: Databricks,<br/>Anthropic, Airbnb, Stripe...</i>"]
+        lever["🏢 Lever API<br/><i>Netflix, OpenAI,<br/>Scale AI...</i>"]
+        rok["🌐 RemoteOK<br/><i>Free API, remote<br/>engineering jobs</i>"]
+        apify["🔗 Apify Scraper<br/><i>LinkedIn & Indeed<br/>via browser automation</i>"]
+        linkedin["📋 LinkedIn Export<br/><i>Manual JSON/CSV<br/>exports from browser</i>"]
+    end
+
+    %% ─── ORCHESTRATOR ───
+    orch["⚙️ Ingestion Orchestrator<br/><i>Deduplication · Normalization<br/>Location filtering · DB storage</i>"]
+
+    %% ─── PARSING ───
+    parser["🔍 JD Parser (GPT-4o)<br/><i>Extract: skills, tech stack,<br/>seniority, keywords, requirements</i>"]
+
+    %% ─── VECTOR STORE ───
+    vectordb["🧠 Vector Store (pgvector)<br/><i>Generate embeddings<br/>Semantic similarity search</i>"]
+
+    %% ─── SCORING ───
+    scorer["📊 Fit Scoring Agent (GPT-4o)<br/><i>Score job vs user_profile.txt<br/>Skills match · Seniority · Location<br/>Threshold: 0.70+</i>"]
+
+    %% ─── DECISION ───
+    decision{{"🚦 Score ≥ 0.70?"}}
+
+    %% ─── TAILORING ───
+    tailor["✍️ Resume Tailoring Agent (GPT-4o)<br/><i>Rewrite summary · Add JD keywords<br/>Optimize for ATS · Keep truthful</i>"]
+
+    %% ─── FORMATTER ───
+    formatter["📄 Resume Formatter<br/><i>Build 2-page DOCX/PDF<br/>Exact template · Hyperlinks<br/>Consistent · formatting · ▸ bullets</i>"]
+
+    %% ─── REVIEW ───
+    review["👁️ Human Review Queue<br/><i>Daily review of tailored apps<br/>Approve / Reject / Edit</i>"]
+
+    %% ─── SUBMISSION ───
+    subgraph submit["📤 SUBMISSION"]
+        direction LR
+        api_submit["🤖 API Submit<br/><i>Greenhouse/Lever<br/>direct API apply</i>"]
+        manual_submit["🖱️ Manual Submit Helper<br/><i>Open URL + pre-fill<br/>instructions for user</i>"]
+    end
+
+    %% ─── TRACKING ───
+    tracker["📈 Application Tracker<br/><i>Status: applied → interview<br/>→ offer → rejected<br/>CSV + DB logging</i>"]
+
+    %% ─── MCP INTEGRATIONS ───
+    subgraph mcp["🔌 MCP INTEGRATIONS"]
+        direction LR
+        gmail["📧 Gmail MCP<br/><i>Monitor inbox for<br/>interview invites,<br/>rejections, follow-ups</i>"]
+        calendar["📅 Calendar MCP<br/><i>Auto-schedule interviews<br/>Block calendar slots<br/>Send reminders</i>"]
+    end
+
+    %% ─── OUTPUTS ───
+    subgraph outputs["📁 OUTPUT FOLDERS"]
+        direction LR
+        actual["actual-resume/<br/><i>Original PDF<br/>(never modified)</i>"]
+        generated["generated-resumes/<br/><i>Tailored DOCX + PDF<br/>per company/role</i>"]
+        artifacts["artifacts/<br/><i>Scored results, found<br/>jobs, run logs</i>"]
+    end
+
+    %% ─── CONNECTIONS ───
+    trigger --> ingestion
+    gh & lever & rok & apify & linkedin --> orch
+    orch --> parser
+    parser --> vectordb
+    vectordb --> scorer
+    scorer --> decision
+    decision -- "✅ Yes (Apply)" --> tailor
+    decision -- "❌ No (Skip)" --> tracker
+    tailor --> formatter
+    formatter --> outputs
+    formatter --> review
+    review -- "✅ Approved" --> submit
+    review -- "❌ Rejected" --> tracker
+    api_submit & manual_submit --> tracker
+    tracker --> mcp
+    gmail --> tracker
+    calendar --> tracker
+
+    %% ─── STYLING ───
+    classDef trigger fill:#FF6B6B,stroke:#333,color:#fff
+    classDef ingestion fill:#4ECDC4,stroke:#333,color:#fff
+    classDef process fill:#45B7D1,stroke:#333,color:#fff
+    classDef ai fill:#96E6A1,stroke:#333,color:#000
+    classDef decision fill:#FFE66D,stroke:#333,color:#000
+    classDef output fill:#DDA0DD,stroke:#333,color:#000
+    classDef mcp fill:#F7DC6F,stroke:#333,color:#000
+
+    class trigger trigger
+    class gh,lever,rok,apify,linkedin ingestion
+    class orch,vectordb,formatter,review process
+    class parser,scorer,tailor ai
+    class decision decision
+    class actual,generated,artifacts output
+    class gmail,calendar,api_submit,manual_submit mcp
